@@ -35,6 +35,63 @@ CHARLIT     \'([^\'\n\\]|\\.)\'
 "break"     { return BREAK; }
 "continue"  { return CONTINUE; }
 
+ /* ---- literais (números, char, string) ---- */
+{FLOATNUM}  {
+    yylval.floatValue = atof(yytext);
+    return FLOATNUM_LIT;
+}
+{INTNUM}    {
+    yylval.intValue = atoi(yytext);
+    return INTNUM_LIT;
+}
+{CHARLIT}   {
+    yylval.charValue = yytext[1];
+    return CHARNUM_LIT;
+}
+{STRING}    {
+    yylval.strValue = strdup(yytext);
+    return STRING_LIT;
+}
+
+ /* ----identificador (DEPOIS das palavras-chave)---- */
+{ID}        {
+    yylval.strValue = strdup(yytext);
+    return ID;
+}
+
+ /* ---- operadores de DOIS caracteres (antes dos de um) ---- */
+"=="        { return EQ; }
+"!="        { return NEQ; }
+"<="        { return LE; }
+">="        { return GE; }
+"&&"        { return AND; }
+"||"        { return OR; }
+"++"        { return INC; }
+"--"        { return DEC; }
+"+="        { return PLUS_ASSIGN; }
+"-="        { return MINUS_ASSIGN; }
+"*="        { return TIMES_ASSIGN; }
+"/="        { return DIVIDE_ASSIGN; }
+
+ /* ---- operadores de UM caractere e pontuação ---- */
+"+"         { return PLUS; }
+"-"         { return MINUS; }
+"*"         { return TIMES; }
+"/"         { return DIVIDE; }
+"%"         { return MOD; }
+"="         { return ASSIGN; }
+"<"         { return LT; }
+">"         { return GT; }
+"!"         { return NOT; }
+"("         { return LPAREN; }
+")"         { return RPAREN; }
+"{"         { return LBRACE; }
+"}"         { return RBRACE; }
+"["         { return LBRACKET; }
+"]"         { return RBRACKET; }
+";"         { return SEMI; }
+","         { return COMMA; }
+
  /* ---- para mensagens de erro caso alguma coisa não seja reconhecida ---- */
 .           {
     fprintf(stderr, "Erro lexico na linha %d: caractere invalido '%s'\n",
