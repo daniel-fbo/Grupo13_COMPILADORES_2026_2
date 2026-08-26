@@ -23,6 +23,7 @@ CHARLIT     \'([^\'\n\\]|\\.)\'
 "/*"([^*]|\*+[^*/])*\*+"/"   { /* comentário de bloco, ignora */ }
 
  /* ----palavras reservadas do C (tem que ser antes da regra de ID pois a ordem importa) ---- */
+ 
 "int"       { return INT; }
 "float"     { return FLOATKW; }
 "char"      { return CHARKW; }
@@ -60,6 +61,7 @@ CHARLIT     \'([^\'\n\\]|\\.)\'
 }
 
  /* ---- operadores de DOIS caracteres (antes dos de um) ---- */
+
 "=="        { return EQ; }
 "!="        { return NEQ; }
 "<="        { return LE; }
@@ -74,6 +76,7 @@ CHARLIT     \'([^\'\n\\]|\\.)\'
 "/="        { return DIVIDE_ASSIGN; }
 
  /* ---- operadores de UM caractere e pontuação ---- */
+
 "+"         { return PLUS; }
 "-"         { return MINUS; }
 "*"         { return TIMES; }
