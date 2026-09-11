@@ -1,7 +1,11 @@
+%{
 #include "parser.tab.h"   /* gerado pelo Bison: bison -d parser.y */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+int line_num = 1;   /* contador de linha, usado nas mensagens de erro */
+%}
 
 %option noyywrap
 
@@ -22,8 +26,7 @@ CHARLIT     \'([^\'\n\\]|\\.)\'
 "//".*                  { /* comentário de linha, ignora */ }
 "/*"([^*]|\*+[^*/])*\*+"/"   { /* comentário de bloco, ignora */ }
 
- /* ----palavras reservadas do C (tem que ser antes da regra de ID pois a ordem importa) ---- */
- 
+ /* ---- palavras reservadas do C (tem que ser antes da regra de ID pois a ordem importa) ---- */
 "int"       { return INT; }
 "float"     { return FLOATKW; }
 "char"      { return CHARKW; }
@@ -54,14 +57,13 @@ CHARLIT     \'([^\'\n\\]|\\.)\'
     return STRING_LIT;
 }
 
- /* ----identificador (DEPOIS das palavras-chave)---- */
+ /* ---- identificador (DEPOIS das palavras-chave) ---- */
 {ID}        {
     yylval.strValue = strdup(yytext);
     return ID;
 }
 
  /* ---- operadores de DOIS caracteres (antes dos de um) ---- */
-
 "=="        { return EQ; }
 "!="        { return NEQ; }
 "<="        { return LE; }
@@ -76,7 +78,6 @@ CHARLIT     \'([^\'\n\\]|\\.)\'
 "/="        { return DIVIDE_ASSIGN; }
 
  /* ---- operadores de UM caractere e pontuação ---- */
-
 "+"         { return PLUS; }
 "-"         { return MINUS; }
 "*"         { return TIMES; }
@@ -100,6 +101,5 @@ CHARLIT     \'([^\'\n\\]|\\.)\'
     fprintf(stderr, "Erro lexico na linha %d: caractere invalido '%s'\n",
             line_num, yytext);
 }
-
 
 %%
