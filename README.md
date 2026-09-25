@@ -1,10 +1,10 @@
 # Grupo13_COMPILADORES_2026_2
 
-## Interpretador de JavaScript simplificado
+## Interpretador de C
 
 Projeto desenvolvido na disciplina de Compiladores 1, na Universidade de Brasília (UnB).
 
-É um interpretador para uma pequena porção da linguagem JavaScript, feito em C com Flex e Bison.
+É um interpretador para uma pequena porção da linguagem C, feito em C com Flex e Bison.
 O programa lê o código, reconhece os tokens, monta uma árvore sintática (AST) e depois
 percorre essa árvore executando os comandos, sem gerar código de máquina.
 
