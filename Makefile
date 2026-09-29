@@ -8,7 +8,7 @@
 #      o_que_eu_quero_criar: do_que_eu_preciso_para_criar
 #          comando que cria
 
-#  a linha do comando precisa começar com um tab
+#  >> a linha do comando precisa começar com um tab <<
 
 
 # compilador de C
@@ -40,15 +40,15 @@ $(SRC)/lex.yy.c: $(SRC)/analisadorLexico.l $(SRC)/analisadorSintatico.tab.c
 
 
 #  PASSO 3 - O gcc junta tudo num programa só
-$(BIN): $(SRC)/analisadorSintatico.tab.c $(SRC)/lex.yy.c $(SRC)/ast.c $(SRC)/interpretador.c
+$(BIN): $(SRC)/analisadorSintatico.tab.c $(SRC)/lex.yy.c $(SRC)/ast.h $(SRC)/ast.c $(SRC)/interpretador.c
 	$(CC) $(CFLAGS) -o $(BIN) $(SRC)/analisadorSintatico.tab.c $(SRC)/lex.yy.c $(SRC)/ast.c $(SRC)/interpretador.c -lm
 
 
 #  make teste
 teste: $(BIN)
-	./$(BIN) exemplos/expressoes.js
-	./$(BIN) exemplos/condicionais.js
-	./$(BIN) exemplos/loops.js
+	./$(BIN) exemplos/expressoes.c
+	./$(BIN) exemplos/condicionais.c
+	./$(BIN) exemplos/loops.c
 
 #  make clean
 clean:

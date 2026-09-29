@@ -1,1 +1,14 @@
+# IDE
 .idea/
+.vscode/
+
+# arquivos gerados pelo build (make) -- nao editar, nao commitar
+interpretador
+src/lex.yy.c
+src/analisadorSintatico.tab.c
+src/analisadorSintatico.tab.h
+src/analisadorSintatico.output
+*.o
+
+# sistema
+.DS_Store
