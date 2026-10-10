@@ -1,20 +1,61 @@
 %{
-#include "analisadorSintatico.tab.h"   /* gerado pelo Bison, ver Makefile */
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
+#include "analisadorSintatico.tab.h"
 
-int line_num = 1;          /* contador de linha, usado nas mensagens de erro */
-extern int num_erros;      /* definido no analisadorSintatico.y */
+extern int num_erros;
+extern int linha_anterior;
+
+static int linha = 1;
+
+#define YY_USER_ACTION yylloc.first_line = yylloc.last_line = linha;
+
+static void erroLexico(const char *formato, ...) {
+    va_list args;
+
+    fprintf(stderr, "Erro lexico na linha %d: ", linha);
+    va_start(args, formato);
+    vfprintf(stderr, formato, args);
+    va_end(args);
+    fprintf(stderr, "\n");
+    num_erros++;
+}
+
+static char escape(char c) {
+    switch (c) {
+    case 'n': return '\n';
+    case 't': return '\t';
+    case 'r': return '\r';
+    case '0': return '\0';
+    default:  return c;
+    }
+}
+
+static char *textoDaString(const char *conteudo, int tamanho) {
+    char *texto = malloc(tamanho + 1);
+    int n = 0;
+
+    if (texto == NULL) {
+        perror("sem memoria para a string");
+        exit(1);
+    }
+    for (int i = 0; i < tamanho; i++) {
+        if (conteudo[i] == '\\') texto[n++] = escape(conteudo[++i]);
+        else                     texto[n++] = conteudo[i];
+    }
+    texto[n] = '\0';
+    return texto;
+}
 %}
 
 %option noyywrap
 %option nounput noinput
 
-/* estado exclusivo para dentro de um comentario de bloco */
 %x COMENTARIO
 
-/* definições reutilizáveis (macros de regex) */
 DIGIT       [0-9]
 LETTER      [a-zA-Z_]
 ID          {LETTER}({LETTER}|{DIGIT})*
@@ -25,26 +66,28 @@ CHARLIT     \'([^\'\n\\]|\\.)\'
 
 %%
 
- /* espaços, tabs, comentários*/
-[ \t\r]+                { /* ignora espaços e tabs */ }
-\n                      { line_num++; }
-"//".*                  { /* comentário de linha, ignora */ }
+%{
+    linha_anterior = yylloc.first_line;
+%}
 
- /* comentário de bloco: entra no estado COMENTARIO para poder contar as linhas */
+ /* ---------- espacos e comentarios ---------- */
+
+[ \t\r]+                { }
+\n                      { linha++; }
+"//".*                  { }
 
 "/*"                    { BEGIN(COMENTARIO); }
 <COMENTARIO>"*/"        { BEGIN(INITIAL); }
-<COMENTARIO>\n          { line_num++; }
-<COMENTARIO>[^*\n]+     { /* ignora */ }
-<COMENTARIO>"*"         { /* ignora */ }
+<COMENTARIO>\n          { linha++; }
+<COMENTARIO>[^*\n]+     { }
+<COMENTARIO>"*"         { }
 <COMENTARIO><<EOF>>     {
-    fprintf(stderr, "Erro lexico na linha %d: comentario de bloco nao foi fechado\n",
-            line_num);
-    num_erros++;
+    erroLexico("comentario de bloco nao foi fechado");
     yyterminate();
 }
 
- /* palavras reservadas do C (tem que ser antes da regra de ID pois a ordem importa) */
+ /* ---------- palavras-chave (antes de ID) ---------- */
+
 "int"       { return INT; }
 "float"     { return FLOATKW; }
 "char"      { return CHARKW; }
@@ -57,38 +100,39 @@ CHARLIT     \'([^\'\n\\]|\\.)\'
 "break"     { return BREAK; }
 "continue"  { return CONTINUE; }
 
- /*literais (números, char, string)*/
+ /* ---------- literais e identificadores ---------- */
+
 {FLOATNUM}  {
     yylval.floatValue = atof(yytext);
     return FLOATNUM_LIT;
 }
 {INTNUM}    {
-    yylval.intValue = atoi(yytext);
+    long long valor = strtoll(yytext, NULL, 10);
+
+    if (valor > INT_MAX) {
+        erroLexico("o numero %s nao cabe em um int", yytext);
+        valor = 0;
+    }
+    yylval.intValue = (int)valor;
     return INTNUM_LIT;
 }
 {CHARLIT}   {
-    yylval.charValue = yytext[1];
+    yylval.charValue = (yytext[1] == '\\') ? escape(yytext[2]) : yytext[1];
     return CHARNUM_LIT;
 }
 {STRING}    {
-    yylval.strValue = strdup(yytext);
+    yylval.strValue = textoDaString(yytext + 1, yyleng - 2);
     return STRING_LIT;
 }
+\"([^\"\n\\]|\\.)*  { erroLexico("string nao foi fechada"); }
 
- /* string que chega no fim da linha sem fechar as aspas
-    (uma string correta é sempre mais longa, então cai na regra de cima) */
-\"([^\"\n\\]|\\.)*  {
-    fprintf(stderr, "Erro lexico na linha %d: string nao foi fechada\n", line_num);
-    num_erros++;
-}
-
- /* identificador (DEPOIS das palavras-chave) */
 {ID}        {
     yylval.strValue = strdup(yytext);
     return ID;
 }
 
- /* operadores de DOIS caracteres (antes dos de um) */
+ /* ---------- operadores de dois caracteres (antes dos de um) ---------- */
+
 "=="        { return EQ; }
 "!="        { return NEQ; }
 "<="        { return LE; }
@@ -102,7 +146,8 @@ CHARLIT     \'([^\'\n\\]|\\.)\'
 "*="        { return TIMES_ASSIGN; }
 "/="        { return DIVIDE_ASSIGN; }
 
- /* operadores de UM caractere e pontuação */
+ /* ---------- operadores de um caractere e pontuacao ---------- */
+
 "+"         { return PLUS; }
 "-"         { return MINUS; }
 "*"         { return TIMES; }
@@ -121,11 +166,6 @@ CHARLIT     \'([^\'\n\\]|\\.)\'
 ";"         { return SEMI; }
 ","         { return COMMA; }
 
- /* para mensagens de erro caso alguma coisa não seja reconhecida*/
-.           {
-    fprintf(stderr, "Erro lexico na linha %d: caractere invalido '%s'\n",
-            line_num, yytext);
-    num_erros++;
-}
+.           { erroLexico("caractere invalido '%s'", yytext); }
 
 %%
