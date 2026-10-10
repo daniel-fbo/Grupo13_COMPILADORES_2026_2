@@ -1,59 +1,74 @@
-#      make          -> monta o interpretador
-#      make teste    -> monta e já roda os exemplos
-#      make clean    -> apaga tudo que foi gerado (deixa a pasta limpa)
-#
-#  Como ler as regras deste arquivo?
-#  Cada regra tem este formato:
-#
-#      o_que_eu_quero_criar: do_que_eu_preciso_para_criar
-#          comando que cria
+CC     = gcc
+CFLAGS = -Wall -Wextra
+SRC    = src
+BIN    = interpretador
 
-#  >> a linha do comando precisa começar com um tab <<
+PARSER = $(SRC)/analisadorSintatico.tab.c
+LEXER  = $(SRC)/lex.yy.c
+FONTES = $(PARSER) $(LEXER) $(SRC)/ast.c $(SRC)/interpretador.c
 
+EXEMPLOS = variaveis expressoes condicionais loops printf escopo completo
+ERROS    = erro-lexico erro-sintatico erro-execucao
 
-# compilador de C
-CC = gcc
+# CODIGO=1 mostra o programa antes da saida, CODIGO=0 mostra so a saida
+CODIGO = 1
 
-# flag
-CFLAGS = -Wall
-
-
-SRC = src
-
-# nome do programa final que vai ser criado
-BIN = interpretador
-
-#  Regra principal -> executa a PRIMEIRA regra do arquivo, all: criar o
-#  interpretador
+# ---------- build ----------
 
 all: $(BIN)
 
+$(PARSER): $(SRC)/analisadorSintatico.y
+	bison -d -o $@ $<
 
-#  PASSO 1 - O Bison lê a gramática
-$(SRC)/analisadorSintatico.tab.c: $(SRC)/analisadorSintatico.y
-	bison -d -o $(SRC)/analisadorSintatico.tab.c $(SRC)/analisadorSintatico.y
+$(LEXER): $(SRC)/analisadorLexico.l $(PARSER)
+	flex -o $@ $<
 
+$(BIN): $(FONTES) $(SRC)/ast.h
+	$(CC) $(CFLAGS) -o $@ $(FONTES)
 
-#  PASSO 2 - O Flex lê as regras de palavras
-$(SRC)/lex.yy.c: $(SRC)/analisadorLexico.l $(SRC)/analisadorSintatico.tab.c
-	flex -o $(SRC)/lex.yy.c $(SRC)/analisadorLexico.l
+# ---------- um exemplo por vez ----------
 
+define mostrar
+@printf '\n===== %s =====\n' $(1)
+@if [ "$(CODIGO)" = 1 ]; then cat -n $(1); printf -- '----- saida -----\n'; fi
+@./$(BIN) $(1); printf '[codigo de saida: %d]\n' $$?
+endef
 
-#  PASSO 3 - O gcc junta tudo num programa só
-$(BIN): $(SRC)/analisadorSintatico.tab.c $(SRC)/lex.yy.c $(SRC)/ast.h $(SRC)/ast.c $(SRC)/interpretador.c
-	$(CC) $(CFLAGS) -o $(BIN) $(SRC)/analisadorSintatico.tab.c $(SRC)/lex.yy.c $(SRC)/ast.c $(SRC)/interpretador.c -lm
+$(EXEMPLOS): %: exemplos/%.c $(BIN)
+	$(call mostrar,$<)
 
+$(ERROS): erro-%: exemplos/erros/%.c $(BIN)
+	$(call mostrar,$<)
 
-#  make teste
-teste: $(BIN)
-	./$(BIN) exemplos/expressoes.c
-	./$(BIN) exemplos/condicionais.c
-	./$(BIN) exemplos/loops.c
+rodar: $(BIN)
+	@test -n "$(ARQ)" || { echo "uso: make rodar ARQ=arquivo.c"; exit 1; }
+	@./$(BIN) $(ARQ)
 
-#  make clean
+# ---------- grupos e demonstracao completa ----------
+
+exemplos erros demo: CODIGO = 0
+
+exemplos: $(EXEMPLOS)
+erros: $(ERROS)
+demo: exemplos erros
+
+# ---------- utilidades ----------
+
+ajuda:
+	@echo "make                  compila o interpretador"
+	@echo "make rodar ARQ=x.c    roda um arquivo qualquer"
+	@echo "make clean            apaga o que foi gerado"
+	@echo
+	@echo "um exemplo por vez (mostra o programa e a saida):"
+	@echo "  $(EXEMPLOS)"
+	@echo "  $(ERROS)"
+	@echo
+	@echo "grupos (so a saida; use CODIGO=1 para ver os programas):"
+	@echo "  make exemplos       todos os programas validos"
+	@echo "  make erros          os tres tipos de erro"
+	@echo "  make demo           tudo"
+
 clean:
-	rm -f $(BIN) $(SRC)/lex.yy.c $(SRC)/analisadorSintatico.tab.c $(SRC)/analisadorSintatico.tab.h
+	rm -f $(BIN) $(LEXER) $(PARSER) $(PARSER:.c=.h)
 
-#  .PHONY avisa ao make que "all", "teste" e "clean" são só NOMES de
-#  tarefas, e não arquivos de verdade
-.PHONY: all teste clean
+.PHONY: all rodar exemplos erros demo ajuda clean $(EXEMPLOS) $(ERROS)
