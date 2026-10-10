@@ -84,5 +84,5 @@
 | `[a-zA-Z_][a-zA-Z0-9_]*` | Nome de variável ou função |
 | `[0-9]+` | Número inteiro |
 | `[0-9]+\.[0-9]+` | Número decimal |
-| `'[^'\\n]'` | Caractere único entre aspas simples |
-| `\"[^\"\\n]*\"` | Texto entre aspas duplas |
+| `'([^'\\\n]\|\\.)'` | Caractere único entre aspas simples, aceita escape (`'\n'`) |
+| `"([^"\\\n]\|\\.)*"` | Texto entre aspas duplas, aceita escapes (`\n`, `\t`, `\"`, `\\`) |
